@@ -668,6 +668,189 @@ theorem sLocalTraceEta_zero_neg_one (f : BruhatCompactSupport Iₛ) (ξ : Hₛ) 
     rintro ⟨u, hu⟩
     exact not_isUnit_zero (hu ▸ u.isUnit)
 
+section
+
+private theorem sLocalTrace_additiveHaar : (νₛ).IsAddHaarMeasure := by
+  let (v : S) : ProperSpace (v.val.adicCompletion F) := properSpace_adicCompletion v.val
+  let (w : InfinitePlace F) : SecondCountableTopology w.Completion :=
+    (InfinitePlace.Completion.isometry_extensionEmbedding w).isEmbedding.secondCountableTopology
+  let (w : InfinitePlace F) : MeasurableSpace w.Completion := borel _
+  let (v : S) : MeasurableSpace (v.val.adicCompletion F) := borel _
+  let (w : InfinitePlace F) : BorelSpace w.Completion := ⟨rfl⟩
+  let (v : S) : BorelSpace (v.val.adicCompletion F) := ⟨rfl⟩
+  let (w : InfinitePlace F) : (infiniteLocalAdditiveTamagawaMeasure F w).IsAddHaarMeasure :=
+    infiniteLocalAdditiveTamagawaMeasure_haar F w
+  let (v : S) : (finiteLocalAdditiveTamagawaMeasure F v.val).IsAddHaarMeasure :=
+    finiteLocalAdditiveTamagawaMeasure_isAddHaar F v.val
+  let : (Measure.pi (infiniteLocalAdditiveTamagawaMeasure F)).IsAddHaarMeasure :=
+    Measure.pi.isAddHaarMeasure _
+  let : (Measure.pi (fun v : S ↦ finiteLocalAdditiveTamagawaMeasure F v.val)).IsAddHaarMeasure :=
+    Measure.pi.isAddHaarMeasure _
+  exact Measure.prod.instIsAddHaarMeasure _ _
+
+/-- Paper: (12.4.1.17), p. 518. For an additive integrand vanishing off the units,
+its multiplicative integral weighted by the idelic norm is its additive integral
+times the finite-place measure factor. -/
+theorem sLocalTrace_integral_units (a : Aₛ → ℂ) (ha : ∀ t, t ∉ range (Units.val : Iₛ → Aₛ) → a t = 0) :
+    (∫ t : Iₛ, (normS(t) : ℂ) * a t.val ∂μₛ) =
+      (sLocalTraceMeasureFactor S : ℂ) * ∫ t, a t ∂νₛ := by
+  have : BorelSpace Aₛ := sAdeleRing_borelSpace
+  have : BorelSpace Iₛ := sIdeleGroup_borelSpace
+  have ho : Topology.IsOpenEmbedding (Units.val : Iₛ → Aₛ) := IsOpenUnits.isOpenEmbedding_unitsVal
+    (M := ((w : InfinitePlace F) → w.Completion) × ((v : S) → v.val.adicCompletion F))
+  let n (t : Aₛ) := modS(t)
+  have hn (t : Iₛ) : normS(t) = n t.val := by simp [n, sIdeleNorm, Units.coe_prod]
+  have hm : Continuous n := by
+    unfold n
+    exact (continuous_finsetProd _ fun w _ ↦
+      (((continuous_apply w).comp continuous_fst).norm.pow _)).mul
+      (continuous_finsetProd _ fun v _ ↦ ((continuous_apply v).comp continuous_snd).norm)
+  let c := sLocalTraceMeasureFactor (F := F) S
+  have hc : 0 ≤ c := by
+    apply Finset.prod_nonneg
+    intro v _
+    have hv : (1 : ℝ) < v.asIdeal.absNorm := by exact_mod_cast HeightOneSpectrum.one_lt_absNorm v
+    exact div_nonneg (Nat.cast_nonneg _) (sub_nonneg.mpr hv.le)
+  let d (t : Aₛ) := ENNReal.ofReal (c / n t)
+  have hd : Measurable d := (measurable_const.div hm.measurable).ennreal_ofReal
+  simp_rw [hn]
+  rw [← ho.measurableEmbedding.integral_map (μ := μₛ) (fun t ↦ (n t : ℂ) * a t),
+    sLocalTrace_measure_density]
+  change (∫ t, (n t : ℂ) * a t ∂((νₛ).restrict _).withDensity d) = _
+  rw [integral_withDensity_eq_integral_toReal_smul hd (ae_of_all _ fun _ ↦ ENNReal.ofReal_lt_top)]
+  rw [← setIntegral_eq_integral_of_forall_compl_eq_zero ha, ← integral_const_mul]
+  apply integral_congr_ae
+  apply (ae_restrict_iff' ho.isOpen_range.measurableSet).2
+  apply ae_of_all
+  rintro _ ⟨t, rfl⟩
+  have hpos : 0 < n t.val := (hn t) ▸ NNReal.coe_pos.mpr (Units.zero_lt (sIdeleNorm F S t))
+  simp only [d, ENNReal.toReal_ofReal (div_nonneg hc hpos.le), Complex.real_smul,
+    Complex.ofReal_div]
+  change (c : ℂ) / _ * (_ * _) = (c : ℂ) * _
+  field_simp [Complex.ofReal_ne_zero.mpr hpos.ne']
+
+private theorem sLocalTraceDilationKernel_skew_frequency (f : BruhatCompactSupport Iₛ) (ξ : Hₛ) (x : Iₛ) (u : Aₛ) :
+    sLocalTraceDilationKernel f (fun z ↦ (ψₛ ((z - x.val) * u) : ℂ)) (ξ.val * x).val =
+      (sLocalTraceMeasureFactor S : ℂ) * fourierₛ (sLocalTraceEta f ξ) (-(x.val * u)) := by
+  have : BorelSpace Aₛ := sAdeleRing_borelSpace
+  have : BorelSpace Iₛ := sIdeleGroup_borelSpace
+  let : (νₛ).IsAddHaarMeasure := sLocalTrace_additiveHaar
+  let : (μₛ).Regular := sMultiplicativeTamagawaMeasure_regular
+  let : (μₛ).IsHaarMeasure := sMultiplicativeTamagawaMeasure_isHaarMeasure
+  let (v : S) : ProperSpace (v.val.adicCompletion F) := properSpace_adicCompletion v.val
+  let (w : InfinitePlace F) : SecondCountableTopology w.Completion :=
+    (InfinitePlace.Completion.isometry_extensionEmbedding w).isEmbedding.secondCountableTopology
+  let : SecondCountableTopology Aₛ := inferInstanceAs (SecondCountableTopology
+    (((w : InfinitePlace F) → w.Completion) × ((v : S) → v.val.adicCompletion F)))
+  let : SecondCountableTopology Iₛ := (sIdeleGroup_description F S).1.secondCountableTopology
+  let : T2Space Aₛ := inferInstanceAs (T2Space
+    (((w : InfinitePlace F) → w.Completion) × ((v : S) → v.val.adicCompletion F)))
+  let : LocallyCompactSpace Aₛ := inferInstanceAs (LocallyCompactSpace
+    (((w : InfinitePlace F) → w.Completion) × ((v : S) → v.val.adicCompletion F)))
+  have hξ : sIdeleNorm F S ξ.val = 1 := by
+    obtain ⟨γ, hγ, he⟩ := Subgroup.mem_map.mp ξ.property
+    exact he ▸ (sIdeleNorm_spec F S).2 hγ
+  obtain ⟨e, he, -⟩ := sAdditiveTamagawaMeasure_selfDual F S
+  let char := e (Multiplicative.ofAdd (1 : Aₛ))
+  have hchar (z : Aₛ) : char (Multiplicative.ofAdd z) = ψₛ z := by
+    simpa only [one_mul] using he 1 z
+  have hneg (z : Aₛ) : star (ψₛ (-z) : ℂ) = (ψₛ z : ℂ) := by
+    rw [← hchar, ofAdd_neg, map_inv, Circle.coe_inv_eq_conj,
+      ← Complex.star_def, star_star, hchar]
+  let k (z : Aₛ) := sLocalTraceEta f ξ z * (ψₛ (z * (x.val * u)) : ℂ)
+  let j (t : Iₛ) := (normS(t) : ℂ) * k (t.val - 1)
+  have hj (g : Iₛ) : j (ξ.val * g⁻¹) = f.val g / (Real.sqrt (normS(g)) : ℂ) *
+      (ψₛ (((g⁻¹).val * (ξ.val * x).val - x.val) * u) : ℂ) := by
+    have ht (t : Iₛ) : (1 : Aₛ) + (t.val - 1) = t.val := by abel
+    simp only [j, k, sLocalTraceEta, ht, Units.val_injective.extend_apply,
+      inv_mul_cancel_left, inv_inv, map_mul, map_inv, hξ, one_mul, inv_one, Units.val_inv_eq_inv_val,
+      NNReal.coe_inv, Real.sqrt_inv, Complex.ofReal_inv, div_inv_eq_mul, Units.val_mul]
+    rw [show (ξ.val.val * (g⁻¹).val - 1) * (x.val * u) =
+      ((g⁻¹).val * (ξ.val.val * x.val) - x.val) * u by ring]
+    have hs : (Real.sqrt (normS(g)) : ℂ) ^ 2 = (normS(g) : ℂ) := by
+      exact_mod_cast Real.sq_sqrt (NNReal.coe_nonneg _)
+    rw [← hs]
+    have hne : (Real.sqrt (normS(g)) : ℂ) ≠ 0 := Complex.ofReal_ne_zero.mpr
+      (Real.sqrt_pos.mpr (NNReal.coe_pos.mpr (Units.zero_lt _))).ne'
+    field_simp [hne]
+  unfold sLocalTraceDilationKernel
+  simp_rw [← hj]
+  rw [integral_inv_eq_self (fun t ↦ j (ξ.val * t)) μₛ, integral_mul_left_eq_self]
+  change (∫ t : Iₛ, (normS(t) : ℂ) * k (t.val - 1) ∂μₛ) = _
+  rw [sLocalTrace_integral_units (fun t ↦ k (t - 1)) (by
+    intro t ht
+    simp [k, sLocalTraceEta, show (1 : Aₛ) + (t - 1) = t by abel, Function.extend_apply' _ _ _ ht]),
+    integral_sub_right_eq_self]
+  unfold tamagawaFourier
+  simp only [mul_neg, hneg, k]
+
+/-- Paper: (12.4.1.21)–(12.4.1.22), p. 518. On the skew diagonal, an even frequency
+symbol gives the same scalar integral on the kernel and Fourier sides.
+Deviation: The dilation average is taken first. This equality of Bochner integrals
+holds independently of the separate integrability assertion. -/
+theorem sLocalTraceCutoffKernel_skew_eq (f : BruhatCompactSupport Iₛ) (ρ : Iₛ → ℂ) (r : Aₛ → ℂ)
+    (heven : ∀ u, r (-u) = r u) (ξ : Hₛ) (x : Iₛ) :
+    sLocalTraceCutoffKernel f ρ r (ξ.val * x) x.val =
+      ρ (ξ.val * x) * (sLocalTraceMeasureFactor S : ℂ) *
+        ∫ u, r u * fourierₛ (sLocalTraceEta f ξ) (x.val * u) ∂νₛ := by
+  let : BorelSpace Aₛ := sAdeleRing_borelSpace
+  let : (νₛ).IsAddHaarMeasure := sLocalTrace_additiveHaar
+  let (v : S) : ProperSpace (v.val.adicCompletion F) := properSpace_adicCompletion v.val
+  let (w : InfinitePlace F) : SecondCountableTopology w.Completion :=
+    (InfinitePlace.Completion.isometry_extensionEmbedding w).isEmbedding.secondCountableTopology
+  let : SecondCountableTopology Aₛ := inferInstanceAs (SecondCountableTopology
+    (((w : InfinitePlace F) → w.Completion) × ((v : S) → v.val.adicCompletion F)))
+  let : T2Space Aₛ := inferInstanceAs (T2Space
+    (((w : InfinitePlace F) → w.Completion) × ((v : S) → v.val.adicCompletion F)))
+  let : LocallyCompactSpace Aₛ := inferInstanceAs (LocallyCompactSpace
+    (((w : InfinitePlace F) → w.Completion) × ((v : S) → v.val.adicCompletion F)))
+  let : SigmaCompactSpace Aₛ := inferInstanceAs (SigmaCompactSpace
+    (((w : InfinitePlace F) → w.Completion) × ((v : S) → v.val.adicCompletion F)))
+  let : (νₛ).Regular := addHaar_regular_of_sigmaCompactSpace νₛ
+  let φ (u : Aₛ) := r u * fourierₛ (sLocalTraceEta f ξ) (x.val * u)
+  have h (u : Aₛ) : r u * ((sLocalTraceMeasureFactor S : ℂ) *
+      fourierₛ (sLocalTraceEta f ξ) (-(x.val * u))) =
+      (sLocalTraceMeasureFactor S : ℂ) * φ (-u) := by
+    rw [show φ (-u) = r u * fourierₛ (sLocalTraceEta f ξ) (-(x.val * u)) by simp [φ, heven]]
+    ring
+  unfold sLocalTraceCutoffKernel
+  simp_rw [sLocalTraceDilationKernel_skew_frequency, h]
+  rw [integral_const_mul, integral_neg_eq_self, mul_assoc]
+
+private theorem sLocalTrace_integrable_symbol_dilate (p : Aₛ → ℂ) (hp : Integrable p νₛ) (x : Iₛ) (r : Aₛ → ℂ)
+    (hr : Measurable r) (M : ℝ) (hb : ∀ u, ‖r u‖ ≤ M) :
+    Integrable (fun u ↦ r u * p (x.val * u)) νₛ := by
+  let : BorelSpace Aₛ := sAdeleRing_borelSpace
+  let : (νₛ).IsAddHaarMeasure := sLocalTrace_additiveHaar
+  let (v : S) : ProperSpace (v.val.adicCompletion F) := properSpace_adicCompletion v.val
+  let (w : InfinitePlace F) : SecondCountableTopology w.Completion :=
+    (InfinitePlace.Completion.isometry_extensionEmbedding w).isEmbedding.secondCountableTopology
+  let : SecondCountableTopology Aₛ := inferInstanceAs (SecondCountableTopology
+    (((w : InfinitePlace F) → w.Completion) × ((v : S) → v.val.adicCompletion F)))
+  let : T2Space Aₛ := inferInstanceAs (T2Space
+    (((w : InfinitePlace F) → w.Completion) × ((v : S) → v.val.adicCompletion F)))
+  let : LocallyCompactSpace Aₛ := inferInstanceAs (LocallyCompactSpace
+    (((w : InfinitePlace F) → w.Completion) × ((v : S) → v.val.adicCompletion F)))
+  let e := DistribMulAction.toAddEquiv Aₛ x
+  have hc : Continuous e := continuous_const.mul continuous_id
+  have hci : Continuous e.symm := continuous_const.mul continuous_id
+  let m := (νₛ).map e
+  let hm : m.IsAddHaarMeasure := e.isAddHaarMeasure_map νₛ hc hci
+  have hi : Integrable p m := by
+    rw [Measure.isAddLeftInvariant_eq_smul m νₛ]
+    exact hp.smul_measure_nnreal
+  have hd : Integrable (fun u ↦ p (x.val * u)) νₛ := hi.comp_measurable hc.measurable
+  simpa only [mul_comm] using hd.mul_bdd hr.aestronglyMeasurable (ae_of_all _ hb)
+
+end
+
+/-- Paper: (12.4.1.21)–(12.4.1.22), p. 518. The additive Tamagawa Fourier transform
+of the translated, zero-extended S-idelic test is integrable.
+Deviation: Step III uses Fourier integration on p. 518. We state explicitly the
+absolute integrability required for the constant frequency symbol. -/
+theorem sLocalTraceEta_fourier_integrable (f : BruhatCompactSupport Iₛ) (ξ : Hₛ) :
+    Integrable (fourierₛ (sLocalTraceEta f ξ)) νₛ := by sorry
+
 /-- Paper: (12.4.1.12)–(12.4.1.22), pp. 517–518. The skew diagonal of the
 composed kernel is the integral of the Fourier transform of the translated test,
 weighted by both cutoffs.
@@ -680,7 +863,10 @@ theorem sLocalTraceCutoffKernel_skew (f : BruhatCompactSupport Iₛ)
     Integrable (fun u ↦ ρ' u * fourierₛ (sLocalTraceEta f ξ) (x.val * u)) νₛ ∧
       sLocalTraceCutoffKernel f ρ ρ' (ξ.val * x) x.val =
         ρ (ξ.val * x) * (sLocalTraceMeasureFactor S : ℂ) *
-          ∫ u, ρ' u * fourierₛ (sLocalTraceEta f ξ) (x.val * u) ∂νₛ := by sorry
+          ∫ u, ρ' u * fourierₛ (sLocalTraceEta f ξ) (x.val * u) ∂νₛ := by
+  obtain ⟨M, hM⟩ := _hBound
+  exact ⟨sLocalTrace_integrable_symbol_dilate _ (sLocalTraceEta_fourier_integrable f ξ)
+    x ρ' _hρ' M hM, sLocalTraceCutoffKernel_skew_eq f ρ ρ' _hEven ξ x⟩
 
 /-- Paper: (12.4.1.23)–(12.4.1.24), p. 518. One sharp orbital mass integrates
 the transformed test against the logarithmic width of the spatial norm interval.
