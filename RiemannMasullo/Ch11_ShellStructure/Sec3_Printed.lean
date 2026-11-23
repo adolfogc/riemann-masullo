@@ -3,6 +3,7 @@ module
 public import RiemannMasullo.Ch10_TraceSpectral.Sec4b
 public import RiemannMasullo.Ch11_ShellStructure.Sec3
 
+import Mathlib.NumberTheory.NumberField.Discriminant.Different
 import RiemannMasullo.Ch05_ThetaZSpaces.Sec3a
 import RiemannMasullo.Ch10_TraceSpectral.Sec1
 import RiemannMasullo.Ch11_ShellStructure.Sec1a
