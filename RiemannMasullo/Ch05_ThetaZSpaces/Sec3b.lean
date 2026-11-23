@@ -1121,23 +1121,24 @@ private def flow (v : ℂ) : LCATopologicalLie ℂˣ where
     (Complex.continuous_exp.comp ((continuous_ofReal.comp
       (continuous_id : Continuous (Multiplicative.toAdd : Multiplicative ℝ → ℝ))).mul continuous_const))
 
-private abbrev E := ModulatedExponentialDecay (archimedeanUnitModulation ℂ 2) Set.univ
-private def extZero (f : E) (z : ℂ) := if h : z ≠ 0 then f.val (Units.mk0 z h) else 0
-private theorem ext_unit (f : E) (u : ℂˣ) : extZero f u.val = f.val u := by
+private def extZero (f : 𝓔(ℂ, 2, univ)) (z : ℂ) := if h : z ≠ 0 then f.val (Units.mk0 z h) else 0
+private theorem ext_unit (f : 𝓔(ℂ, 2, univ)) (u : ℂˣ) : extZero f u.val = f.val u := by
   simp [extZero, u.ne_zero]
 
 /-- Combine a phase multiplier and differentiability on the punctured plane with the two orbit operators. -/
-private theorem onWeight (hreg : ∀ (f : E) (z : ℂˣ), DifferentiableAt ℝ (extZero f) z.val) (s : Bool) (c : ℝ) (M : SchwartzBruhat ℂˣ →L[ℂ] SchwartzBruhat ℂˣ)
+private theorem onWeight
+    (hreg : ∀ (f : 𝓔(ℂ, 2, univ)) (z : ℂˣ), DifferentiableAt ℝ (extZero f) z.val)
+    (s : Bool) (c : ℝ) (M : SchwartzBruhat ℂˣ →L[ℂ] SchwartzBruhat ℂˣ)
     (hM : ∀ (g : SchwartzBruhat ℂˣ) (z : ℂˣ), M g z =
       ((‖z.val‖ : ℝ) : ℂ) / (if s then star z.val else z.val) * g z) :
-    ∃ U : E →L[ℂ] SchwartzBruhat ℂˣ, ∀ f (z : ℂˣ),
+    ∃ U : 𝓔(ℂ, 2, univ) →L[ℂ] SchwartzBruhat ℂˣ, ∀ f (z : ℂˣ),
       U f z = twist c ((if s then wirtingerConjDeriv else wirtingerDeriv) (extZero f)) z.val := by
   let b := c - 1/2
   let n := archimedeanUnitModulation ℂ 2
-  let W (a : ℝ) : E →L[ℂ] SchwartzBruhat ℂˣ :=
+  let W (a : ℝ) : 𝓔(ℂ, 2, univ) →L[ℂ] SchwartzBruhat ℂˣ :=
     ⟨modulatedExponentialDecayTwist n Set.univ ⟨a, Set.mem_univ _⟩,
       continuous_decay_twist n Set.univ _⟩
-  have hw (a : ℝ) (f : E) (z : ℂˣ) : W a f z = twist a (extZero f) z.val := by
+  have hw (a : ℝ) (f : 𝓔(ℂ, 2, univ)) (z : ℂˣ) : W a f z = twist a (extZero f) z.val := by
     change (((((archimedeanUnitModulation ℂ 2 z).val : ℝ) ^ a : ℝ) : ℂ) * f.val z) = _
     rw [archimedeanUnitModulation_apply, twist, ext_unit]
   obtain ⟨R,hR⟩ := bruhatFirstOrder_schwartz (flow 1)
@@ -1351,7 +1352,7 @@ private def expUnits : Multiplicative ℂ →ₜ* ℂˣ where
   continuous_toFun := Units.isEmbedding_val₀.continuous_iff.mpr continuous_exp
 
 /-- Around z, use log(y/z) to lift a punctured-plane argument to the vector cover. -/
-private theorem chartDifferentiable (f : E) (z : ℂˣ) : DifferentiableAt ℝ (extZero f) z.val := by
+private theorem chartDifferentiable (f : 𝓔(ℂ, 2, univ)) (z : ℂˣ) : DifferentiableAt ℝ (extZero f) z.val := by
   obtain ⟨e,J,hJ⟩ := wholeChart
   let _ := e.finiteGroup
   let _ := e.finiteTopology
@@ -1386,7 +1387,7 @@ private theorem chartDifferentiable (f : E) (z : ℂˣ) : DifferentiableAt ℝ (
 
 /-- Both first derivatives, at each output weight, as continuous maps to Schwartz–Bruhat space. -/
 private theorem firstTwist (s : Bool) (c : ℝ) :
-    ∃ U : E →L[ℂ] SchwartzBruhat ℂˣ, ∀ f (z : ℂˣ),
+    ∃ U : 𝓔(ℂ, 2, univ) →L[ℂ] SchwartzBruhat ℂˣ, ∀ f (z : ℂˣ),
       U f z = twist c ((if s then wirtingerConjDeriv else wirtingerDeriv) (extZero f)) z.val := by
   obtain ⟨M,hM⟩ := phaseMultiplier s
   exact onWeight chartDifferentiable s c M hM
@@ -1394,17 +1395,17 @@ private theorem firstTwist (s : Bool) (c : ℝ) :
 /-- The output at weight zero gives the underlying function. The output at each
 other weight proves membership and continuity in the all-exponent space. -/
 private theorem firstEndomorphism (s : Bool) :
-    ∃ D : E →L[ℂ] E, ∀ f (z : ℂˣ),
+    ∃ D : 𝓔(ℂ, 2, univ) →L[ℂ] 𝓔(ℂ, 2, univ), ∀ f (z : ℂˣ),
       (D f).val z = (if s then wirtingerConjDeriv else wirtingerDeriv) (extZero f) z.val := by
   let n := archimedeanUnitModulation ℂ 2
   let I : Set ℝ := univ
   let U (c : ℝ) := (firstTwist s c).choose
   let L := (schwartzBruhatSubmodule ℂˣ).subtype.comp (U 0).toLinearMap
-  have hL (f : E) (z : ℂˣ) : L f z =
+  have hL (f : 𝓔(ℂ, 2, univ)) (z : ℂˣ) : L f z =
       (if s then wirtingerConjDeriv else wirtingerDeriv) (extZero f) z.val := by
     change (U 0 f).val z = _
     simpa [U,twist] using (firstTwist s 0).choose_spec f z
-  have hw (c : I) (f : E) : modulationWeight n c (L f) = (U c f).val := by
+  have hw (c : I) (f : 𝓔(ℂ, 2, univ)) : modulationWeight n c (L f) = (U c f).val := by
     funext z
     change (((((archimedeanUnitModulation ℂ 2 z).val : ℝ) ^ (c : ℝ) : ℝ) : ℂ) * L f z) = _
     rw [archimedeanUnitModulation_apply, hL, (firstTwist s c).choose_spec f z]
@@ -1422,7 +1423,7 @@ private theorem firstEndomorphism (s : Bool) :
 /-- Paper: Proposition 5.3.3.2(2)(2), p. 250. Both iterated derivatives act
 continuously on the all-exponent decay space. -/
 private theorem iterated (s : Bool) (m : ℕ) :
-    ∃ D : E →L[ℂ] E, ∀ f (z : ℂˣ), (D f).val z =
+    ∃ D : 𝓔(ℂ, 2, univ) →L[ℂ] 𝓔(ℂ, 2, univ), ∀ f (z : ℂˣ), (D f).val z =
       ((if s then wirtingerConjDeriv else wirtingerDeriv)^[m] (extZero f)) z.val := by
   let W := if s then wirtingerConjDeriv else wirtingerDeriv
   induction m with
