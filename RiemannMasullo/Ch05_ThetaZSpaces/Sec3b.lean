@@ -1308,7 +1308,6 @@ private theorem wholeChart :
   let d := a.elementary.some
   obtain ⟨w,hw⟩ := fullBruhatStage_quotientEquiv hG hk (MonoidHom.id ℂˣ) IsOpenQuotientMap.id (by simp)
   let e : ElementaryLCAPresentation ℂˣ := {d with equiv := w.symm.trans d.equiv}
-  let J := schwartzBruhatStageCLM a d
   have hmax (b : BruhatStructuralPair ℂˣ) : b ≤ a := ⟨le_top, (bot_le : (⊥ : Subgroup ℂˣ) ≤ OrderDual.ofDual b.val.2)⟩
   obtain ⟨j,hj⟩ := maxEquiv a d hmax
   refine ⟨e, j, fun g z ↦ ?_⟩
