@@ -692,7 +692,7 @@ private theorem sLocalTrace_additiveHaar : (νₛ).IsAddHaarMeasure := by
 /-- Paper: (12.4.1.17), p. 518. For an additive integrand vanishing off the units,
 its multiplicative integral weighted by the idelic norm is its additive integral
 times the finite-place measure factor. -/
-theorem sLocalTrace_integral_units (a : Aₛ → ℂ) (ha : ∀ t, t ∉ range (Units.val : Iₛ → Aₛ) → a t = 0) :
+private theorem sLocalTrace_integral_units (a : Aₛ → ℂ) (ha : ∀ t, t ∉ range (Units.val : Iₛ → Aₛ) → a t = 0) :
     (∫ t : Iₛ, (normS(t) : ℂ) * a t.val ∂μₛ) =
       (sLocalTraceMeasureFactor S : ℂ) * ∫ t, a t ∂νₛ := by
   have : BorelSpace Aₛ := sAdeleRing_borelSpace
@@ -789,7 +789,7 @@ private theorem sLocalTraceDilationKernel_skew_frequency (f : BruhatCompactSuppo
 symbol gives the same scalar integral on the kernel and Fourier sides.
 Deviation: The dilation average is taken first. This equality of Bochner integrals
 holds independently of the separate integrability assertion. -/
-theorem sLocalTraceCutoffKernel_skew_eq (f : BruhatCompactSupport Iₛ) (ρ : Iₛ → ℂ) (r : Aₛ → ℂ)
+private theorem sLocalTraceCutoffKernel_skew_eq (f : BruhatCompactSupport Iₛ) (ρ : Iₛ → ℂ) (r : Aₛ → ℂ)
     (heven : ∀ u, r (-u) = r u) (ξ : Hₛ) (x : Iₛ) :
     sLocalTraceCutoffKernel f ρ r (ξ.val * x) x.val =
       ρ (ξ.val * x) * (sLocalTraceMeasureFactor S : ℂ) *
@@ -1356,7 +1356,7 @@ end SLocalTraceEta
 of the translated, zero-extended S-idelic test is integrable.
 Deviation: Step III uses Fourier integration on p. 518. We state explicitly the
 absolute integrability required for the constant frequency symbol. -/
-theorem sLocalTraceEta_fourier_integrable (f : BruhatCompactSupport Iₛ) (ξ : Hₛ) :
+private theorem sLocalTraceEta_fourier_integrable (f : BruhatCompactSupport Iₛ) (ξ : Hₛ) :
     Integrable (fourierₛ (sLocalTraceEta f ξ)) νₛ := by
   obtain ⟨η, hη⟩ := SLocalTraceEta.eta_test f ξ
   let G := Multiplicative Aₛ
