@@ -3,11 +3,9 @@ module
 public import RiemannMasullo.Ch10_TraceSpectral.Sec4b
 public import RiemannMasullo.Ch11_ShellStructure.Sec3
 
-import all RiemannMasullo.Ch05_ThetaZSpaces.Sec1
 import RiemannMasullo.Ch05_ThetaZSpaces.Sec3a
 import RiemannMasullo.Ch10_TraceSpectral.Sec1
 import RiemannMasullo.Ch11_ShellStructure.Sec1a
-import all RiemannMasullo.Ch12_TraceGeometric.Sec5
 
 /-! # False printed claims from §11.3 -/
 
@@ -99,6 +97,17 @@ private theorem placeNorm : twoPlace.asIdeal.absNorm = 2 := by
     RingOfIntegers.rank]
   simp
 
+private theorem smooth_comp_bruhat {G : Type*} [CommGroup G] [TopologicalSpace G]
+    {v : G → ℂ} (hv : IsBruhatSmooth v) {f : ℂ → ℂ} (hf : ContDiff ℝ (∞) f) :
+    IsBruhatSmooth (fun x ↦ f (v x)) := by
+  intro p
+  obtain ⟨k, hk, hi, hdesc⟩ := hv p
+  refine ⟨k, hk, fun h x ↦ congrArg f (hi h x), ?_⟩
+  intro a ha
+  obtain ⟨q, hq, hdiff⟩ := hdesc a ha
+  exact ⟨fun y ↦ f (q y), fun x ↦ congrArg f (hq x),
+    fun e z b ↦ (hf.of_le (by simp)).comp (hdiff e z b)⟩
+
 private theorem radialTest :
     ∃ φ ψ : BruhatCompactSupport C(ℚ),
       tsupport φ.val ⊆ {x | ratNorm(x) ∈ Icc (7 / 4 : ℝ) (9 / 4)} ∧
@@ -106,31 +115,47 @@ private theorem radialTest :
       (∀ x y, ratNorm(x) = ratNorm(y) → φ.val x = φ.val y) ∧
       (∀ x y, ratNorm(y) = ratNorm(x) / 2 → ψ.val x = φ.val y) := by
   let B : ContDiffBump (2 : ℝ) := ⟨1 / 8, 1 / 4, by norm_num, by norm_num⟩
-  let g (t : ℝ) : ℂ := B (Real.exp t)
-  have hg : ContDiff ℝ (∞) g := Complex.ofRealCLM.contDiff.comp (B.contDiff.comp Real.contDiff_exp)
-  have hgc : HasCompactSupport g := by
-    apply HasCompactSupport.intro (isCompact_Icc (a := Real.log (7 / 4)) (b := Real.log (9 / 4)))
-    intro t ht
-    have h : Real.exp t ∉ Metric.closedBall (2 : ℝ) B.rOut := by
-      intro h
-      apply ht
-      rw [Metric.mem_closedBall, Real.dist_eq, abs_le] at h
-      change -(1 / 4 : ℝ) ≤ _ ∧ _ ≤ 1 / 4 at h
-      exact ⟨(Real.log_le_iff_le_exp (by norm_num)).2 (by linarith [h.1]),
-        (Real.le_log_iff_exp_le (by norm_num)).2 (by linarith [h.2])⟩
-    change (↑(B (Real.exp t)) : ℂ) = 0
-    exact_mod_cast (image_eq_zero_of_notMem_tsupport (B.tsupport_eq ▸ h) : B (Real.exp t) = 0)
-  obtain ⟨φ, hφ⟩ := exists_normTest (F := ℚ) g hg hgc
-  have hv (x : C(ℚ)) : φ.val x = (B ratNorm(x) : ℂ) := by
-    rw [hφ]; simp only [g, Real.exp_log (nnrealUnits_coe_pos _)]
-  have hg2 : ContDiff ℝ (∞) (fun t ↦ g (t - Real.log 2)) :=
-    hg.comp (contDiff_id.sub contDiff_const)
-  have hgc2 : HasCompactSupport (fun t ↦ g (t - Real.log 2)) :=
-    hgc.comp_homeomorph (Homeomorph.subRight (Real.log 2))
-  obtain ⟨ψ, hψ⟩ := exists_normTest (F := ℚ) _ hg2 hgc2
-  have hw (x : C(ℚ)) : ψ.val x = (B (ratNorm(x) / 2) : ℂ) := by
-    rw [hψ]; simp only [g, ← Real.log_div (nnrealUnits_coe_pos _).ne' two_ne_zero,
-      Real.exp_log (div_pos (nnrealUnits_coe_pos _) two_pos)]
+  have mkTest (d : ℝ) (hd : 0 < d) :
+      ∃ φ : BruhatCompactSupport C(ℚ), ∀ x, φ.val x = (B (ratNorm(x) / d) : ℂ) := by
+    let χ : QuasiCharacter C(ℚ) :=
+      { toFun := fun x ↦ (ratNorm(x) : ℂ)
+        map_one' := by simp
+        map_mul' := fun x y ↦ by simp
+        continuous_toFun := Complex.continuous_ofReal.comp (NNReal.continuous_coe.comp
+          (Units.continuous_val.comp (isProperMap_ideleClassNorm ℚ).continuous)) }
+    let f (z : ℂ) : ℂ := B (z.re / d)
+    have hs : IsBruhatSmooth (fun x ↦ (B (ratNorm(x) / d) : ℂ)) := by
+      apply smooth_comp_bruhat (v := fun x ↦ χ x) (f := f)
+        ((mem_bruhatSmoothSubmodule_iff _).1 (quasiCharacter_mem_bruhatSmooth χ))
+      exact Complex.ofRealCLM.contDiff.comp (B.contDiff.comp (Complex.reCLM.contDiff.div_const d))
+    let unit (t : ℝ) : ℝ≥0ˣ := Units.mk0 (Real.exp t).toNNReal
+      (Real.toNNReal_pos.mpr (Real.exp_pos t)).ne'
+    have hu : Continuous unit := Units.continuous_iff.mpr
+      ⟨continuous_real_toNNReal.comp Real.continuous_exp,
+        (continuous_real_toNNReal.comp Real.continuous_exp).inv₀ fun t ↦
+          (Real.toNNReal_pos.mpr (Real.exp_pos t)).ne'⟩
+    have hc : HasCompactSupport (fun x ↦ (B (ratNorm(x) / d) : ℂ)) := by
+      apply HasCompactSupport.intro ((isProperMap_ideleClassNorm ℚ).isCompact_preimage
+        ((isCompact_Icc (a := Real.log (7 / 4 * d)) (b := Real.log (9 / 4 * d))).image hu))
+      intro x hx
+      by_contra hn
+      have hB : B (ratNorm(x) / d) ≠ 0 := fun h ↦ hn (by simp [h])
+      have hm := subset_tsupport _ hB
+      rw [B.tsupport_eq, Metric.mem_closedBall, Real.dist_eq, abs_le] at hm
+      change -(1 / 4 : ℝ) ≤ _ ∧ _ ≤ 1 / 4 at hm
+      have hl : 7 / 4 ≤ ratNorm(x) / d := by linarith [hm.1]
+      have hr : ratNorm(x) / d ≤ 9 / 4 := by linarith [hm.2]
+      have hp : 0 < ratNorm(x) := NNReal.coe_pos.mpr (Units.zero_lt _)
+      apply hx
+      refine ⟨Real.log ratNorm(x), ⟨Real.log_le_log (by positivity) ((le_div_iff₀ hd).1 hl),
+        Real.log_le_log hp ((div_le_iff₀ hd).1 hr)⟩, ?_⟩
+      apply Units.ext
+      change (Real.exp (Real.log _)).toNNReal = _
+      rw [Real.exp_log hp, Real.toNNReal_coe]
+    exact ⟨⟨_, (mem_bruhatSmoothSubmodule_iff _).2 hs, hc⟩, fun _ ↦ rfl⟩
+  obtain ⟨φ, hφ⟩ := mkTest 1 one_pos
+  have hv (x : C(ℚ)) : φ.val x = (B ratNorm(x) : ℂ) := by simpa using hφ x
+  obtain ⟨ψ, hw⟩ := mkTest 2 two_pos
   refine ⟨φ, ψ, ?_, fun x hx ↦ ?_, fun x y h ↦ by rw [hv, hv, h], fun x y h ↦ by rw [hw, hv, h]⟩
   · apply closure_minimal _ (isClosed_Icc.preimage
       (NNReal.continuous_coe.comp (Units.continuous_val.comp (isProperMap_ideleClassNorm ℚ).continuous)))
@@ -260,8 +285,14 @@ theorem Printed.orbitalEulerSum_eq_poisson_false :
       c * nuclearityTestMellin 1 φ (z.val - 1 / 2) := by
     unfold nuclearityTestMellin
     simp_rw [hψ]
-    refine (integral_translate_character (ideleClassTamagawaMeasure ℚ) φ.val
-      (ideleClassNormTwist (1 : PontryaginDual C(ℚ)) (z.val - 1 / 2)).toMonoidHom b).trans ?_
+    let χ := (ideleClassNormTwist (1 : PontryaginDual C(ℚ)) (z.val - 1 / 2)).toMonoidHom
+    let μ := ideleClassTamagawaMeasure ℚ
+    have ht : (∫ x, φ.val (b⁻¹ * x) * χ x ∂μ) = χ b * ∫ x, φ.val x * χ x ∂μ := by
+      rw [← integral_mul_left_eq_self (μ := μ) (fun x ↦ φ.val (b⁻¹ * x) * χ x) b,
+        ← integral_const_mul]
+      exact integral_congr_ae (.of_forall fun x ↦ by
+        simp only [mul_inv_cancel_left, map_mul, mul_left_comm])
+    refine ht.trans ?_
     congr 1
     change (1 : ℂ) * (ratNorm(b) : ℂ) ^ (z.val - 1 / 2) = _
     rw [hb, Complex.ofReal_ofNat, one_mul, sub_eq_add_neg, Complex.cpow_add _ _ (by norm_num), hm, one_mul]
